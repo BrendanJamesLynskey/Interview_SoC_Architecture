@@ -219,7 +219,7 @@ The crossbar has separate paths to each slave. Masters 1 and 2 both contend for 
 
 **Q7 -- Answer: C**
 
-A 64-bit bus at 1 GHz has a peak bandwidth of 8 bytes * 1 GHz = 8 GB/s. A 10% TDMA allocation gives 10% of 8 GB/s = 800 MB/s. Wait -- let us recheck: 8 GB/s * 0.10 = 0.8 GB/s = 800 MB/s. This matches option C. Option A (800 MB/s) is the same numerical value but expressed ambiguously -- let us confirm: 8 GB/s = 8192 MB/s; 10% = 819 MB/s if 1 GB = 1024 MB, but using 1 GB = 1000 MB, 8 GB/s * 0.10 = 800 MB/s. Option B (6.4 GB/s) corresponds to an 80% allocation. Option D (8 GB/s) is the full bus bandwidth without any TDMA restriction.
+A 64-bit bus at 1 GHz has a peak bandwidth of 8 bytes * 1 GHz = 8 GB/s. A 10% TDMA allocation gives 10% of 8 GB/s = 0.8 GB/s = 800 MB/s. This matches option C. Note: using SI units (1 GB = 1000 MB), 8 GB/s * 0.10 = 800 MB/s exactly. Option B (6.4 GB/s) corresponds to an 80% allocation. Option D (8 GB/s) is the full bus bandwidth without any TDMA restriction.
 
 ---
 

@@ -96,12 +96,6 @@ $$\text{CPU} + \text{GPU} + \text{Display} = 30 + 28.8 + 4 = 62.8\ \text{GB/s}$$
 
 **DRAM supply:**
 
-$$\text{LPDDR5X-8533 bandwidth} = 2\ \text{channels} \times 64\ \text{bits} \times 8533 \times 10^6\ \text{transfers/s} / 8\ \text{bits/byte}$$
-
-$$= 2 \times 8 \times 8.533 \times 10^9 = 136.5\ \text{Gb/s} = \mathbf{17.1\ \text{GB/s per channel}}$$
-
-Wait — re-read problem: LPDDR5X-8533 is the data rate in MT/s. Recalculate:
-
 $$\text{Per channel} = \frac{64\ \text{bits}}{8} \times 8533 \times 10^6\ \text{MT/s} = 8\ \text{bytes} \times 8.533 \times 10^9\ \text{T/s} = 68.3\ \text{GB/s}$$
 
 With 2 channels (DDR, so each 64-bit channel operates double-data-rate):

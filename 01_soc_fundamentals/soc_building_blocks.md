@@ -163,7 +163,7 @@ UART register map:
 
 Software sequence to transmit 'A' (0x41):
   1. Poll STATUS until TX_EMPTY == 1:
-       while (*(volatile uint32_t *)0x40000008 & 0x1) == 0) {}
+       while ((*(volatile uint32_t *)0x40000008 & 0x1) == 0) {}
   2. Write byte to TX_DATA:
        *(volatile uint32_t *)0x40000000 = 0x41;
 

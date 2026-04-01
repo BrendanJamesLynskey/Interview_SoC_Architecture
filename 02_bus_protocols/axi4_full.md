@@ -147,9 +147,6 @@ address would cross the aligned boundary.
 - Aligned boundary: [0x10 ... 0x1F]
 
 ```
-Beat 1: 0x1C          (starting address)
-Beat 2: 0x1C + 4 = 0x20 -> would cross 0x20 boundary? No, 0x20 > 0x1F -> WRAPS to 0x10
-Wait -- recalculate:
   Boundary base = FLOOR(0x1C / 16) x 16 = 0x10
   Beat 1: 0x1C
   Beat 2: 0x1C + 4 = 0x20 -> 0x20 >= 0x20 (boundary top exclusive), wrap -> 0x10

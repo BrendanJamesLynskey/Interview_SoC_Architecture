@@ -373,7 +373,7 @@ module tb_soc_addr_decoder;
 
         // ---- PCIe window tests ----
         pcie_en = 1; pcie_base_reg = 6'h08;  // PCIe at 0x2000_0000? No — 0x08<<26=0x2000_0000
-        // Wait — that overlaps SRAM. Verify overlap detection:
+        // Intentional overlap with SRAM — verify overlap detection:
         #1;
         if (!pcie_overlap_err) $error("FAIL: should detect PCIe/SRAM overlap");
         else $display("PASS: PCIe/SRAM overlap correctly flagged");

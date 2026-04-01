@@ -286,19 +286,6 @@ A **memory map alias** occurs when multiple different addresses map to the same 
 Suppose the designer writes a decoder that only checks bits [15:12] to save gates:
 
 ```
-// Decoder checks only addr[15:12], ignores addr[31:16] and addr[11:0]
-wire uart0_sel = (addr[15:12] == 4'h0);   // WRONG: partial decode
-
-Intended: UART0 selected at exactly 0x4000_0000 - 0x4000_0FFF
-
-Actual behaviour:
-  0x4000_0000 -> UART0 selected (addr[15:12] == 0x0, addr[31:16] == 0x4000) CORRECT
-  0x4000_1000 -> UART0 selected (addr[15:12] == 0x1 -- WRONG, not 0x0)
-  
-Wait — this particular example doesn't select at 0x4000_1000. Let's make it clearer:
-```
-
-```
 // A worse partial decoder for an SRAM — only checks bits [15:14]:
 wire sram_sel = (addr[15:14] == 2'b00);
 

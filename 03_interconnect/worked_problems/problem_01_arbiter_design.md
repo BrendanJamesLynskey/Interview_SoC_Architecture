@@ -245,21 +245,6 @@ For simplicity, assume CPU0 and CPU1 first request at cycle 16 and 20 respective
 ```
 Cycles 1-9: No RT requests. HBW arbitration with WRR.
 
-Cycle  1: HBW eligible [Disp(2cr), ISP(1cr)]. Grant Disp. disp_cr→1.
-Cycle  2: HBW eligible [Disp(1cr), ISP(1cr)]. Grant Disp (lowest index). disp_cr→0.
-           After grant: eligible = {ISP} only → round ends. Replenish: disp_cr=2, isp_cr=1.
-           Wait: replenish logic fires when eligible_v2 & ~grant_v2 == 0
-           At cycle 2: eligible_v2 = 11, grant_v2 = 01 (Disp). eligible & ~grant = 10 (ISP).
-           ISP still eligible → no replenish yet.
-Cycle  3: HBW eligible [Disp(2cr), ISP(1cr)]. Grant Disp. disp_cr→1.
-           Hmm — this does not achieve 2:1 ratio correctly with simple lowest-index.
-
--- Revised: use round-robin pointer within HBW to achieve weight ordering:
--- Round structure: Disp gets 2 grants, ISP gets 1 grant per round.
--- Implement with credit decrement and fixed order: Disp first until credits exhausted,
--- then ISP until credits exhausted, then replenish.
-
-Corrected trace:
 Cycle  1: disp_cr=2, isp_cr=1. Eligible: Disp. Grant Disp. disp_cr→1.
 Cycle  2: disp_cr=1, isp_cr=1. Eligible: Disp. Grant Disp. disp_cr→0.
            Disp exhausted; ISP still has credit. No replenish.
