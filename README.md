@@ -44,6 +44,7 @@ Standard interconnect protocols and their characteristics.
 - [AXI4-Stream](02_bus_protocols/axi4_stream.md)
 - [AHB and APB](02_bus_protocols/ahb_and_apb.md)
 - [CHI and ACE](02_bus_protocols/chi_and_ace.md)
+- [Network-on-Chip and Mesh Interconnects](02_bus_protocols/noc_and_mesh_interconnects.md)
 - [Coding Challenges](02_bus_protocols/coding_challenges/)
   - [AXI4-Lite Slave Implementation](02_bus_protocols/coding_challenges/challenge_01_axi4_lite_slave.sv)
   - [AXI4-Stream Adapter](02_bus_protocols/coding_challenges/challenge_02_axi4_stream_adapter.sv)
