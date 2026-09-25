@@ -49,7 +49,7 @@ The five agents divide into three distinct classes:
 
 - **Fixed priority (CPU0 > CPU1 > Display > ISP > BE):** Guarantees CPU latency but starves all lower agents if CPUs are busy. Display DMA starvation would cause display tearing. Rejected.
 
-- **Pure round-robin (all 5 equal):** Each agent gets 1/5 = 20% of bandwidth. At 16 bytes/cycle × 1 GHz = 16 GB/s total, each agent gets 3.2 GB/s. This exceeds the minimum requirements for Display DMA (4 GB/s needed — not met) and ISP (2 GB/s — met). Also, CPU round-robin worst case = 4 cycles (4 other agents each served once before CPU's turn) — well within 16 cycles. However, 3.2 GB/s for Display DMA is insufficient. Rejected.
+- **Pure round-robin (all 5 equal):** Each agent gets 1/5 = 20% of bandwidth. At 16 bytes/cycle × 1 GHz = 16 GB/s total, each agent gets 3.2 GB/s. This meets the ISP minimum (2 GB/s) but not the Display DMA minimum (4 GB/s). Also, CPU round-robin worst case = 4 cycles (4 other agents each served once before CPU's turn) — well within 16 cycles. However, 3.2 GB/s for Display DMA is insufficient. Rejected.
 
 - **Two-level priority with WRR within levels:**
   - Level 1 (RT): CPU0 and CPU1, fixed priority (CPU0 > CPU1), served before HBW/BE whenever requesting
@@ -295,12 +295,12 @@ Maximum BE starvation = STARVATION_LIMIT + 1 = 129 cycles = 129 ns. ✓
 | 4–6 | Disp, Disp, ISP | HBW WRR round 2 |
 | 7–15 | (continue HBW pattern) | BE age accumulating |
 | 16 | CPU0 | RT preempts HBW |
-| 17–18 | Disp, ISP (HBW resumes) | CPU0 done |
-| 19–20 | Disp, Disp | HBW |
-| 21 | CPU1 | RT request |
+| 17–19 | Disp, Disp, ISP (HBW resumes) | CPU0 done |
+| 20 | CPU0 | CPU0 and CPU1 both request; CPU0 wins |
+| 21 | CPU1 | RT request (waited 1 cycle) |
 | 22–32 | HBW pattern resumes | RT latencies met |
 
-Over 32 cycles: CPU0 ≥ 1 grant (latency = 0 ✓), CPU1 ≥ 1 grant (latency ≤ 15 ✓), Disp ≥ 14 grants (≈44%), ISP ≥ 7 grants (≈22%). Ratio Disp:ISP ≈ 2:1. ✓
+Over 32 cycles: CPU0 ≥ 1 grant (latency = 0 ✓), CPU1 ≥ 1 grant (latency ≤ 15 ✓), Disp = 19 grants (≈59%), ISP = 10 grants (≈31%). Ratio Disp:ISP ≈ 2:1. ✓
 
 ---
 
@@ -357,9 +357,9 @@ Under the original design, CPU1's worst case was 15 cycles (CPU0 holds the port 
 
 - If CPU0 monopolises the port: CPU0 can hold it for at most 15 cycles before the burst is exhausted. On the 16th cycle, the burst is exhausted and HBW/BE are served. CPU0 then starts a new burst. CPU1 must wait for CPU0's burst (up to 15 cycles) PLUS one non-RT grant cycle PLUS potentially another full CPU0 burst before getting its turn — unless round-robin is used within the RT class.
 
-- With round-robin within the RT class (alternating CPU0 and CPU1 grants), the 16-cycle shared budget gives each CPU at most 8 consecutive grants per budget window. CPU1's worst-case wait = 8 cycles (CPU0's half of the budget) + 1 cycle (HBW/BE inserted) + its own grant = at most 9 cycles. This is tighter than the original 15-cycle individual guarantee.
+- With round-robin within the RT class (alternating CPU0 and CPU1 grants), CPU0 can never take two RT grants in a row while CPU1 is waiting. CPU1's worst-case wait = 1 cycle (CPU0's turn) + 1 cycle (HBW/BE inserted if the shared budget runs out at that point) = at most 2 cycles before its own grant. This is tighter than the original 15-cycle individual guarantee.
 
-- **If both CPUs request simultaneously and CPU0 always wins fixed priority:** CPU1 must wait for CPU0 to exhaust its budget (up to 15 grants) + 1 non-RT cycle. Worst case = 16 cycles — matching the original requirement, but now enforced by the budget mechanism rather than by natural inter-request spacing.
+- **If both CPUs request simultaneously and CPU0 always wins fixed priority:** CPU1 must wait for CPU0 to exhaust its budget (up to 15 grants) + 1 non-RT cycle — and then CPU0 wins again. If CPU0 requests continuously, CPU1 is never granted: the budget alone does not bound CPU1's latency under fixed priority.
 
 **Summary:** The shared budget does not necessarily degrade CPU1's latency if round-robin is used within the RT class. It does provide a stronger guarantee that RT traffic cannot monopolise the port indefinitely — protecting the HBW agents from starvation under pathological RT load.
 

@@ -179,7 +179,7 @@ What state does the cache line in Core 1 transition to after step 3?
 | 10 | B      |
 | 11 | B      |
 | 12 | D      |
-| 13 | B      |
+| 13 | A      |
 | 14 | B      |
 | 15 | B      |
 
@@ -265,9 +265,9 @@ The memory region is marked non-cacheable, so the CPU read bypasses the cache an
 
 ---
 
-**Q13 -- Answer: B**
+**Q13 -- Answer: A**
 
-VIPT aliasing analysis: index bits = log2(256 sets) = 8 bits; offset bits = log2(64 bytes/line) = 6 bits. The combined index + offset = 8 + 6 = 14 bits. Since 4 KB pages have a 12-bit offset, the top 2 index bits (bits [13:12]) come from the virtual page number. Two virtual pages that map to the same physical page may have different values for bits [13:12], creating different cache indices for the same physical data -- this is aliasing. The correct answer is B (aliasing is possible; the question statement says "No -- aliasing is possible", which means aliasing protection IS required). To be precise: the cache DOES require aliasing protection because the index exceeds the page offset boundary. Option C is wrong; associativity does not automatically prevent aliasing -- it can allow aliasing to be resolved by restricting how physical addresses may be placed (page colouring), but 8-way associativity alone does not prevent the problem. Option D has the logic backwards.
+VIPT aliasing analysis: index bits = log2(256 sets) = 8 bits; offset bits = log2(64 bytes/line) = 6 bits. The combined index + offset = 8 + 6 = 14 bits. Since 4 KB pages have a 12-bit offset, the top 2 index bits (bits [13:12]) come from the virtual page number. Two virtual pages that map to the same physical page may have different values for bits [13:12], creating different cache indices for the same physical data -- this is aliasing. The correct answer is A: the cache DOES require aliasing protection because the index exceeds the page offset boundary. Option B has the right arithmetic but the wrong conclusion ("No"). Option C is wrong; associativity does not automatically prevent aliasing -- it can allow aliasing to be resolved by restricting how physical addresses may be placed (page colouring), but 8-way associativity alone does not prevent the problem. Option D has the logic backwards.
 
 ---
 

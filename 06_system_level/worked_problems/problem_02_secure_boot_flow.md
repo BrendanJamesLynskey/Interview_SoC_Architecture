@@ -344,14 +344,14 @@ Attack scenario:
 1. OEM discovers a critical vulnerability in BL2 version 3.
 2. OEM releases BL2 version 4 that fixes the vulnerability.
 3. All devices update via OTA to version 4.
-4. OTP anti-rollback counter for BL2 is blown to 0x03 (minimum version = 3)
+4. OTP anti-rollback counter for BL2 is blown to 4 (minimum version = 4, so the vulnerable version 3 is also rejected)
    after all devices confirm update.
 5. Attacker intercepts the OTA channel and attempts to deliver BL2 version 2.
 
 Boot sequence response at Step 10 (anti-rollback check):
-min_version_bl2 = otp_read_byte(OTP_ANTI_ROLLBACK + 1) → 3
+min_version_bl2 = otp_read_byte(OTP_ANTI_ROLLBACK + 1) → 4
 header->version = 2 (the old, vulnerable version)
-2 < 3 → Boot halts: "BL2 version below minimum (rollback attack)"
+2 < 4 → Boot halts: "BL2 version below minimum (rollback attack)"
 
 Result: Attack BLOCKED. The OTP counter reflects the burned minimum version;
 the attacker cannot change OTP.

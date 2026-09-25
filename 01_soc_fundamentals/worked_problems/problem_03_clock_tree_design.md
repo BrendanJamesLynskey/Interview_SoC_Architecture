@@ -469,7 +469,7 @@ POR assertion to first CPU instruction (worst case):
   T_cpu_pll_lock         = 50 µs    (CPU PLL acquisition)
   T_gpu_pll_lock         = 50 µs    (GPU PLL, in parallel with CPU PLL)
   T_ddr_pll_lock         = 100 µs   (DDR PLL, longer — stricter phase noise req)
-  T_reset_sequencer      = 2 µs     (16 AO cycles @ 24 MHz for sequencing delays)
+  T_reset_sequencer      = 1 µs     (8 + 16 = 24 AO cycles @ 24 MHz for sequencing delays)
   T_boot_rom_access      = 10 ns    (first instruction fetch after CPU exits reset)
   ---
   Total to first instruction: ~1.7 ms (dominated by supply ramp + XO startup)
@@ -557,7 +557,7 @@ endmodule
        (simulates worst-case pointer timing)
 
 3. DVFS transition simulation:
-   [ ] All 12 DVFS transitions (4 CPU x 4 GPU states = 16 combinations minus same)
+   [ ] All 12 CPU DVFS transitions (4 states x 3 other states = 12 ordered pairs)
    [ ] Verify no glitch on clk_out of glitch-free MUX during transition
        (check: period of clk_out never < shortest clock period of either input)
    [ ] Verify CPU architectural register file retains values through transition

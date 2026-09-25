@@ -19,7 +19,7 @@ You are the interconnect architect for a mobile application processor SoC. The S
 
 - Interconnect: 2D mesh NoC, 256-bit links, 1 GHz operating frequency
 - System cache (LLC): 8 MB unified, hit rate 40% for CPU, 60% for GPU
-- DRAM: 2× LPDDR5X-8533, 64-bit channels each, total interface bandwidth = 2 × (64/8) × 8533 × 10^6 / 2 = 68.3 GB/s
+- DRAM: 2× LPDDR5X-8533, 32-bit channels each, total interface bandwidth = 2 × (32/8) × 8533 × 10^6 = 68.3 GB/s
 
 **Tasks:**
 
@@ -96,21 +96,21 @@ $$\text{CPU} + \text{GPU} + \text{Display} = 30 + 28.8 + 4 = 62.8\ \text{GB/s}$$
 
 **DRAM supply:**
 
-$$\text{Per channel} = \frac{64\ \text{bits}}{8} \times 8533 \times 10^6\ \text{MT/s} = 8\ \text{bytes} \times 8.533 \times 10^9\ \text{T/s} = 68.3\ \text{GB/s}$$
+$$\text{Per channel} = \frac{32\ \text{bits}}{8} \times 8533 \times 10^6\ \text{MT/s} = 4\ \text{bytes} \times 8.533 \times 10^9\ \text{T/s} = 34.1\ \text{GB/s}$$
 
-With 2 channels (DDR, so each 64-bit channel operates double-data-rate):
+With 2 channels (the 8533 MT/s rate already counts both clock edges, so there is no further DDR factor):
 
-$$\text{Total DRAM bandwidth} = 2 \times 68.3 / 2 = 68.3\ \text{GB/s}$$
+$$\text{Total DRAM bandwidth} = 2 \times 34.1 = 68.3\ \text{GB/s}$$
 
-Note: The problem statement gives total = 68.3 GB/s directly. Accept this.
+Note: The problem statement gives total = 68.3 GB/s directly.
 
 **Comparison:**
 
 | Scenario | DRAM demand (GB/s) | DRAM supply (GB/s) | Headroom |
 |---|---|---|---|
 | Gaming | 62.8 | 68.3 | +8.0% |
-| All agents peak | 163 (pre-LLC) | 68.3 | -76% (over-demand without LLC) |
-| All agents post-LLC | 99.8 × 0.6 (est.) ≈ 60 | 68.3 | +12% |
+| All agents peak | 163 (pre-LLC) | 68.3 | -139% (over-demand without LLC) |
+| All agents post-LLC | 99.8 (30 + 28.8 + 12 + 4 + 9 + 16) | 68.3 | -46% |
 
 **Conclusion:**
 
@@ -134,7 +134,7 @@ $$\text{Links required} = \frac{\text{DRAM demand}}{\text{Link BW}} = \frac{62.8
 
 $$\boxed{\text{Minimum 2 parallel bisection links required}}$$
 
-A 4×4 mesh with DRAM controllers at the bottom row provides 4 bisection links when the cut is between rows 2 and 3. Bisection bandwidth = 4 × 32 = 128 GB/s — more than 3× the requirement, providing substantial margin.
+A 4×4 mesh with DRAM controllers at the bottom row provides 4 bisection links when the cut is between rows 2 and 3. Bisection bandwidth = 4 × 32 = 128 GB/s — about 2× the requirement, providing substantial margin.
 
 **Mesh configuration recommendation:**
 
@@ -202,7 +202,7 @@ DRAM slot allocation (16-slot window):
   Slots 1–7, 9–15: GPU/CPU/others (WRR)
 ```
 
-This guarantees display gets at most 2 DRAM slots per 16 (12.5% of DRAM bandwidth = 68.3 × 0.125 = 8.5 GB/s) — well above the 4 GB/s requirement.
+This guarantees display gets at least 2 DRAM slots per 16 (12.5% of DRAM bandwidth = 68.3 × 0.125 = 8.5 GB/s) — well above the 4 GB/s requirement.
 
 **Result:**
 

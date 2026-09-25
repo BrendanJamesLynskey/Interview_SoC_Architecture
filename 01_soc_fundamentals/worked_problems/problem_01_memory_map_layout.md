@@ -24,7 +24,7 @@ You are architecting a microcontroller-class SoC with the following resource lis
 | Power Management Unit      | 4 KB    | Clock control, voltage, power domains      |
 | System Control block       | 4 KB    | Chip ID, debug config, boot strap          |
 | CoreSight debug            | 64 KB   | JTAG/SWD debug infrastructure             |
-| ARM Private Peripheral Bus | 4 KB    | SysTick, ITM (fixed ARM location)          |
+| ARM Private Peripheral Bus | 4 KB    | SysTick, NVIC, SCB (fixed ARM location)    |
 
 **Constraints:**
 1. The ARM Cortex-M4 reset vector must be at 0x0000_0000.
@@ -82,7 +82,7 @@ SRAM:        128 KB at 0x2000_0000. Alignment: 0x20000. 0x2000_0000 / 0x20000 = 
              SRAM ends at 0x2001_FFFF.
 Backup SRAM: 4 KB at 0x4000_0000 is wrong (peripheral space).
              Backup SRAM is always-on, often placed near the PMU in peripheral space,
-             or in a dedicated AO region. Place at 0x4000_B000 alongside PMU.
+             or in a dedicated AO region. Place at 0x4000_F000 alongside PMU.
              (Decision rationale: backup SRAM is software-accessible memory but is
              in the AO power domain with the PMU. Placing it in peripheral space
              adjacent to PMU registers makes sense for driver organisation.)
@@ -187,10 +187,10 @@ module soc_addr_decoder_lvl1 (
     // Boot ROM: 64 KB at 0x0000_0000. Check bits[31:16] == 16'h0000.
     assign boot_rom_sel   = (haddr[31:16] == 16'h0000);
 
-    // Flash: 512 KB at 0x0008_0000. Check bits[31:19] == 13'b0000000000100.
+    // Flash: 512 KB at 0x0008_0000. Check bits[31:19] == 13'b0000000000001.
     // 0x0008_0000 = 32'b0000_0000_0000_1000_0000_0000_0000_0000
-    // bits[31:19] = 0000_0000_0000_1 = 13'h0004 (0x0008_0000 >> 19 = 4)
-    assign flash_sel      = (haddr[31:19] == 13'h0004);
+    // bits[31:19] = 0000_0000_0000_1 = 13'h0001 (0x0008_0000 >> 19 = 1)
+    assign flash_sel      = (haddr[31:19] == 13'h0001);
 
     // SRAM: 128 KB at 0x2000_0000. Check bits[31:17] == 15'h1000.
     // 0x2000_0000 >> 17 = 0x1000
@@ -384,7 +384,7 @@ All regions are in distinct 512 MB ARM architecture regions:
 ### Future Expansion Headroom
 
 ```
-Code space available:   511 MB - 64 KB - 512 KB ≈ 510 MB remaining (99.9% free)
+Code space available:   512 MB - 64 KB - 512 KB ≈ 511.4 MB remaining (99.9% free)
 SRAM space available:   512 MB - 128 KB ≈ 511 MB remaining (99.97% free)
 Peripheral space used:  17 x 4 KB = 68 KB of 512 MB (0.013% used, 99.99% free)
 ```
@@ -397,7 +397,7 @@ The 50% reservation constraint is far exceeded.
 
 1. **Follow the ARM Cortex-M memory map template.** Placing Flash at 0x0000_0000 and SRAM at 0x2000_0000 is not a convention — it enables CMSIS compatibility, correct MPU region configuration, and tool support out of the box.
 
-2. **Use 4 KB minimum peripheral pages, even for small peripherals.** The 4 KB alignment requirement simplifies the decoder and guarantees compatibility with the MMU / MPU, which operates on 4 KB page granularity.
+2. **Use 4 KB minimum peripheral pages, even for small peripherals.** The 4 KB alignment requirement simplifies the decoder and matches MMU 4 KB page granularity (the Cortex-M4 MPU itself allows regions down to 32 bytes).
 
 3. **Always generate C headers from the RTL address map.** Manual transcription from the RTL address map to the header file is a common source of bugs. Use IP-XACT / SystemRDL tooling to auto-generate both.
 

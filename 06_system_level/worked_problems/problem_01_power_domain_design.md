@@ -193,7 +193,7 @@ T=0    PMU receives wakeup event (timer, interrupt from modem)
 T=1    PMU closes CPU power switch: CPU_PWR_SW_EN = 1
          → VDD_CPU ramps up from 0 to nominal (e.g., 0.75 V for boot OPP)
 T=2    VDD_CPU_PGOOD asserts (PMIC power good signal to PMU)
-         Typical ramp time: 20–50 μs at 10 mV/μs PMIC slew rate
+         Typical ramp time: ~75 μs (0.75 V at 10 mV/μs PMIC slew rate)
 T=3    PMU asserts CPU_PLL_EN → PLL starts, waits for lock
          PLL lock time: 50–100 μs
 T=4    PMU enables CPU clocks: CPU_CLK_EN = 1
