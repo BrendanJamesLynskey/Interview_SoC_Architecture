@@ -65,17 +65,17 @@ Suggested time: 25 minutes.
 
 **Q6.** An SoC designer allocates a contiguous 256 MB region starting at 0x2000_0000 for external DDR. A natural binary address decoder is used. Which of the following sets of address bits uniquely selects this region and no other?
 
-- A) A[31:28] = 0x2
-- B) A[31:28] = 0x2 and A[27:0] = any
-- C) A[31:28] must equal 4'b0010 (decode bits [31:28] = 0x2)
-- D) A[31:27] = 5'b0010_0 (decode the top 5 bits)
+- A) A[31:28] = 4'b0010
+- B) A[31:29] = 3'b001
+- C) A[31:27] = 5'b0010_0
+- D) A[31:28] = 4'b0010 and A[27] = 1
 
 ---
 
 **Q7.** A synchronous reset is released for a CPU core on the rising edge of the processor clock. Which statement best describes a key hazard of this approach?
 
 - A) Synchronous resets cannot be used with flip-flops that only have asynchronous reset inputs
-- B) Synchronous resets are incompatible with clock gating because the reset pulse may be masked
+- B) If the clock is gated off while reset is asserted, the synchronous reset may never be sampled, because a synchronous reset needs a running clock to take effect
 - C) Synchronous resets are inherently non-deterministic due to metastability on the reset line
 - D) Synchronous resets always cause a race condition between the reset and data paths
 
@@ -175,8 +175,8 @@ The CPU attempts to read address 0x2008_0000. What is the expected response?
 | 3  | B      |
 | 4  | C      |
 | 5  | A      |
-| 6  | C      |
-| 7  | A      |
+| 6  | A      |
+| 7  | B      |
 | 8  | B      |
 | 9  | B      |
 | 10 | B      |
@@ -220,15 +220,15 @@ Memory-mapped I/O (MMIO) means peripheral control and status registers are assig
 
 ---
 
-**Q6 -- Answer: C**
+**Q6 -- Answer: A**
 
-A 256 MB region starting at 0x2000_0000 occupies addresses 0x2000_0000 -- 0x2FFF_FFFF. This region is uniquely selected by address bits [31:28] = 4'b0010 (0x2). Options A and B are equivalent and both state the same thing in different notation, but only option C phrases it precisely as the hardware comparison used in decode logic. Option D (decoding 5 bits, A[31:27] = 5'b0010_0) would select only the lower 128 MB half of the region (0x2000_0000 -- 0x27FF_FFFF), not the full 256 MB.
+A 256 MB region starting at 0x2000_0000 occupies addresses 0x2000_0000 -- 0x2FFF_FFFF. 256 MB = 2^28 bytes, so bits [27:0] are the offset and the region is selected by comparing the remaining top 4 bits: A[31:28] = 4'b0010 (0x2). Option B decodes only 3 bits and selects the 512 MB range 0x2000_0000 -- 0x3FFF_FFFF, which is too large. Option C (5 bits, A[31:27] = 5'b0010_0) selects only the lower 128 MB half (0x2000_0000 -- 0x27FF_FFFF). Option D selects only the upper 128 MB half (0x2800_0000 -- 0x2FFF_FFFF).
 
 ---
 
-**Q7 -- Answer: A**
+**Q7 -- Answer: B**
 
-Synchronous resets require the reset signal to be sampled at the clock edge. If the flip-flop's reset input is asynchronous-only (no synchronous reset pin), the designer must use a synchronous reset implemented by adding reset logic to the data input (D = reset ? 0 : next_state), which consumes extra logic resources. This is a real constraint in ASIC design. Option B is wrong: synchronous reset is compatible with clock gating -- if the clock is gated off, the reset holds its current value and is applied when the clock resumes, which is typically the desired behaviour. Option C is incorrect: it is the asynchronous reset release that risks metastability, not the synchronous reset itself. Option D is a vague statement that does not describe a specific hazard of synchronous reset.
+A synchronous reset is just another data input, so it only takes effect on an active clock edge. If a clock gate disables the clock at the same time as reset is asserted, the reset can be removed again before the clock resumes, and the flip-flops never see it. Cummings, Mills and Golson ("Asynchronous & Synchronous Reset Design Techniques -- Part Deux", SNUG Boston 2003, "Disadvantages of synchronous resets") give exactly this case: "if you have a gated clock to save power, the clock may be disabled coincident with the assertion of reset. Only an asynchronous reset will work in this situation." Option A is wrong: the same paper notes that a library without synchronous-reset flip-flops is not a problem, because "the reset logic can easily be synthesized outside the flop itself" (D = reset ? 0 : next_state). Option C is incorrect: it is the asynchronous reset release that risks metastability, not the synchronous reset itself. Option D is a vague statement that does not describe a specific hazard of synchronous reset.
 
 ---
 

@@ -189,7 +189,9 @@ typedef struct {
     uint32_t image_size;     // Size of BL1 binary in bytes
     uint8_t  version;        // Anti-rollback version
     uint8_t  reserved[3];
-    uint8_t  signature[256]; // RSA-2048-PSS signature over SHA-256(image)
+    uint8_t  signature[256]; // RSA-2048-PSS signature over SHA-256(magic || image_size ||
+                             //   version || reserved || public_key || image) --
+                             //   every header field except the signature itself
     uint8_t  public_key[294];// RSA-2048 public key (DER SubjectPublicKeyInfo)
     uint8_t  image[];        // Variable-length BL1 binary follows
 } bl1_image_header_t;
@@ -244,8 +246,18 @@ boot_result_t boot_rom_verify_bl1(void) {
     spi_flash_read(SPI_FLASH_BASE + BL1_FLASH_OFFSET + sizeof(bl1_image_header_t),
                    bl1_scratch, header->image_size);
 
-    /* Step 8: Compute SHA-256 of the BL1 binary */
-    hw_sha256(bl1_scratch, header->image_size, image_hash);
+    /* Step 8: Compute SHA-256 over the signed header fields AND the BL1 binary.
+     * The header (including the anti-rollback version) must be covered by the
+     * signature: if only the image were signed, an attacker could take an old,
+     * validly signed image, raise the version in its header, and pass the
+     * anti-rollback check in Step 10. */
+    sha256_ctx_t ctx;
+    hw_sha256_init(&ctx);
+    hw_sha256_update(&ctx, (const uint8_t *)&header->magic,
+                     offsetof(bl1_image_header_t, signature));   /* magic, image_size, version, reserved */
+    hw_sha256_update(&ctx, header->public_key, sizeof(header->public_key));
+    hw_sha256_update(&ctx, bl1_scratch, header->image_size);
+    hw_sha256_final(&ctx, image_hash);   /* digest of header fields || image */
 
     /* Step 9: Verify RSA-2048-PSS signature
      * rsa_pss_verify(public_key, signature, message_hash) → 0=OK, else error */
@@ -289,7 +301,7 @@ int memcmp_constant_time(const uint8_t *a, const uint8_t *b, size_t len) {
 
 - **Constant-time hash comparison:** A variable-time `memcmp` allows a timing oracle attack. The implementation ORs all differences into a single accumulator, taking identical time regardless of where the first mismatch occurs.
 - **Key authentication before signature verify:** We verify the public key against OTP *before* using it. Without this, an attacker places their own key in flash with a self-signed BL1 image.
-- **Anti-rollback checked last:** Checking version before signature wastes time if the signature fails. More importantly, checking version from OTP is fast (one fuse read); checking signature is slow (RSA operation ~20 ms).
+- **Signed header, anti-rollback checked after the signature:** The version field is only trustworthy once the signature that covers it has been verified. The signed digest includes every header field (magic, size, version, public key) as well as the image, so an old image cannot be relabelled with a newer version number.
 
 ---
 
@@ -354,7 +366,9 @@ header->version = 2 (the old, vulnerable version)
 2 < 4 → Boot halts: "BL2 version below minimum (rollback attack)"
 
 Result: Attack BLOCKED. The OTP counter reflects the burned minimum version;
-the attacker cannot change OTP.
+the attacker cannot change OTP. Nor can the attacker edit the old image's header to
+claim version 4 or higher: the version is inside the signed digest, so any change
+fails signature verification before the anti-rollback check is reached.
 
 Notes on OTA rollback procedure:
 - OEM blows OTP anti-rollback counter ONLY after confirming a majority
@@ -485,8 +499,8 @@ Phase 4: Rollback prevention
 
 2. **Constant-time cryptographic comparisons are mandatory.** Variable-time comparisons in boot code are a known side-channel attack vector that has been exploited in real products.
 
-3. **Anti-rollback counters must be incremented after, not before, confirming a successful update.** Premature OTP blowing has bricked millions of production devices.
+3. **Anti-rollback counters must be incremented after, not before, confirming a successful update.** Blowing the fuse before the new image is confirmed bootable can leave a device with no image it is allowed to boot.
 
 4. **A/B partitioning makes OTA atomic.** Atomic updates prevent the most dangerous firmware state: a partially-updated device that cannot boot either old or new firmware.
 
-5. **Signature verification order matters.** Verify the key against OTP before using it, then verify the image against the key. Reversing the order allows an attacker to supply a self-signed image.
+5. **Signature verification order and coverage matter.** Verify the key against OTP before using it, then verify the header and image against the key. Reversing the order allows an attacker to supply a self-signed image; leaving the header version unsigned lets an attacker relabel an old image and defeat anti-rollback.

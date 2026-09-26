@@ -4,7 +4,7 @@
 
 You are the lead verification architect for a mid-range mobile SoC. The chip contains:
 
-- **CPU subsystem:** 4× Cortex-A55 cores, 256 KB L1 (per core), 1 MB shared L2, CCI-500 coherent interconnect
+- **CPU subsystem:** 4× Cortex-A55 cores, 64 KB L1 I + 64 KB L1 D and 256 KB private L2 (per core), CCI-500 coherent interconnect
 - **GPU subsystem:** 4-core Mali-G57, 512 KB GPU L2
 - **Memory subsystem:** Dual-channel LPDDR5 controller, 4 MB system L3 cache (DSU)
 - **DMA subsystem:** 8-channel DMA-330 controller
@@ -89,7 +89,7 @@ Subsystem testbenches verify integration of multiple IPs sharing a common interc
 ```
 Subsystem           IPs included                   Primary scenarios        Duration
 ──────────────────────────────────────────────────────────────────────────────────────
-CPU memory          4× CPU cores, L2 cache,         Cache coherency,         6 weeks
+CPU memory          4× CPU cores, L2 caches,        Cache coherency,         6 weeks
 subsystem           CCI-500, LPDDR5 ctrl,           coherent DMA,
                     DMA-330, L3 DSU                 multi-core races,
                                                     DVFS transitions

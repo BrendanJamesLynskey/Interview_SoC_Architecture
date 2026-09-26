@@ -146,12 +146,12 @@ Suggested time: 25 minutes.
 
 ---
 
-**Q15.** An I2C bus is operating at 400 kHz (Fast Mode). A master holds SDA low while SCL is high for longer than the bus-free maximum time. What bus condition does this create and what is the consequence?
+**Q15.** An I2C bus is operating at 400 kHz (Fast Mode). The master is reset in the middle of a read, while a slave is driving a 0 data bit on SDA. When the master restarts, it finds SCL high but SDA held low indefinitely, so it cannot generate a START. What is this condition and what is the standard recovery?
 
-- A) A repeated START condition, allowing the master to begin a new transaction without releasing the bus
-- B) A STOP condition followed immediately by a START, which is a normal combined transaction
-- C) A bus lockup condition -- the master is inadvertently asserting a STOP with SDA transitioning low during SCL high, potentially leaving the bus in an undefined state
-- D) A bus arbitration loss -- the master loses bus ownership because it deviated from the I2C protocol timing
+- A) A repeated START condition; the master should continue the previous transaction
+- B) Clock stretching by the slave; the master should simply wait for the slave to release the bus
+- C) Bus lockup: the slave is stuck mid-byte holding SDA low; the master should clock SCL up to nine times until the slave releases SDA, then generate a STOP
+- D) Arbitration loss; the master should back off and retry after the bus-free time
 
 
 
@@ -267,4 +267,4 @@ In the GIC-400, the GICD_ITARGETSR (Interrupt Target Registers) specify which CP
 
 **Q15 -- Answer: C**
 
-On I2C, a STOP condition is defined as SDA transitioning from low to high while SCL is high. A repeated START is SDA transitioning from high to low while SCL is high. If the master drives SDA low while SCL remains high for an extended period, some slaves may interpret this as a STOP condition (SDA was previously high), causing undefined behaviour. The bus may appear idle to other masters even though the original master has not released it. More seriously, if a slave's internal state machine is mid-transaction and receives an unexpected condition, it may lock up with SDA held low, causing the I2C bus lockup that requires a clock cycle recovery sequence (9 extra SCLK pulses). Option A (repeated START) requires SDA high-to-low while SCL is high -- this is the opposite transition to what is described. Option B is a normal sequential transaction. Option D (arbitration loss) applies to multi-master bus contention, not to a single master violating protocol timing.
+The slave is still part-way through sending a byte. It holds SDA low for its current 0 bit and waits for SCL clocks that the reset master will never send, so SDA stays low and the master cannot generate a START (SDA high-to-low while SCL is high) or a STOP (SDA low-to-high while SCL is high). The I2C specification's recovery is a "bus clear": if SDA is stuck low, the master sends nine clock pulses, and the device holding SDA should release it within those nine clocks; if it does not, a hardware reset or power cycle is needed (NXP UM10204, I2C-bus specification, §3.1.16 "Bus clear"). Once SDA is released, the master issues a STOP to return every device to idle. Option A is wrong: a repeated START needs SDA to go high-to-low while SCL is high, which is impossible while SDA is stuck low. Option B is wrong: clock stretching holds SCL low, not SDA. Option D is wrong: arbitration applies when two masters drive the bus at the same time, not to a single slave stuck mid-byte.

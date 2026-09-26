@@ -224,54 +224,62 @@ In deep sleep: CPU off, GPU off, ISP off, NPU off, Display off, Modem off. Activ
 
 **Process assumption:** 7 nm FinFET, 25°C junction temperature.
 
-Typical leakage figures for 7 nm:
-- Standard cell leakage: ~0.05 nA/gate at nominal Vt, scales with area
-- High-Vt (retention) standard cell: ~0.005 nA/gate (10x reduction)
-- SRAM leakage: ~1–5 nA/bit at minimum retention voltage (0.5 V)
+**Converting the target.** Leakage flows from the internal rails (0.55–0.75 V), but the target is a battery current. Budget in rail power, then convert: battery current = rail power ÷ regulator efficiency ÷ 3.8 V. With an assumed (illustrative) 85% PMIC efficiency, the 1.14 mW target allows 1.14 × 0.85 = 0.97 mW of rail power, minus the PMIC's own quiescent current (illustrative 30 μA at the battery).
 
-**Budget allocation:**
+Leakage figures used (illustrative values for this exercise, 25°C):
+- Standard-Vt standard cell at 0.75 V: ~2 nA/cell
+- High-Vt standard cell at 0.75 V: ~0.5 nA/cell
+- High-density SRAM at a 0.55 V retention voltage: ~20 pA/bit
+
+For scale, a published low-power MCU figure is 20 nA per 4 KB RAM section retained (nRF52832 Product Specification v1.9, §18.10.1), i.e. 20 nA ÷ 32,768 bits ≈ 0.6 pA/bit. A high-density 7 nm FinFET bitcell leaks more than a low-power MCU process, so a value one to two orders of magnitude higher is used here, but tens of pA/bit, not nA/bit.
+
+**Budget allocation (rail power):**
 
 ```
-Domain                   State        Cells/Size           Leakage    Budget
-──────────────────────────────────────────────────────────────────────────────
-PD_AON                   Active       ~50k std cells       40 μA      50 μA
+Domain                   State        Size                    Calculation                     Power
+────────────────────────────────────────────────────────────────────────────────────────────────────
+PD_AON                   Active       ~50k HVT cells          50k × 0.5 nA × 0.75 V            18.8 μW
                                       (PMU, RTC, boot)
-                                      
-PD_MEM_CTRL              Retention    ~200k std cells      30 μA      50 μA
-                                      (low-Vt → high-Vt   
-                                      swap in retention)
-                                      
-L3 cache SRAM            Retention    4 MB SRAM            80 μA      90 μA
-(in MEM_CTRL domain)                  @ 0.55V retention
-                                      
-CPU retention latches    On (AON)     32k shadow FFs       10 μA      15 μA
-(in PD_AON)                           (high-Vt cells)
-                                      
-DRAM (LPDDR5)            Self-refresh External device      60 μA      80 μA
-(off-chip, for reference)
-                                      
-PD_PERIPH clock-gated    Idle         ~100k std cells      15 μA      25 μA
+
+CPU retention latches    On (AON)     32k HVT shadow FFs      32k × 0.5 nA × 0.75 V            12.0 μW
+(in PD_AON)
+
+PD_MEM_CTRL              Retention    ~200k HVT cells         200k × 0.5 nA × 0.75 V           75.0 μW
+                                      (self-refresh control)
+
+PD_PERIPH clock-gated    Idle         ~100k SVT cells         100k × 2 nA × 0.75 V            150.0 μW
                                       (GPIO, RTC periph)
-                                      
-Miscellaneous (power      ─            Level shifters,      15 μA      15 μA  
-switches, isolation cells)             isolation cells
-                                      
-Margin                    ─            ─                    ─          25 μA (8%)
-──────────────────────────────────────────────────────────────────────────────
-TOTAL (on-SoC only)                                        250 μA     350 μA
+
+Miscellaneous            ─            Level shifters, iso-    lump sum (illustrative)          30.0 μW
+                                      lation, power switches
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Logic subtotal                                                                                285.8 μW
+
+L3 cache SRAM            Retention    4 MB = 33.55 Mbit       33.55M × 20 pA = 671 μA × 0.55 V 369.1 μW
+(in MEM_CTRL domain)                  @ 0.55 V
+────────────────────────────────────────────────────────────────────────────────────────────────────
+TOTAL (on-SoC, L3 retained)                                                                   654.8 μW
 ```
 
-The on-chip leakage budget is 250 μA, leaving 50 μA for PMIC quiescent current and voltage regulators (not shown in SoC budget).
+DRAM self-refresh current is drawn by the external LPDDR5 device on its own rails and is outside this SoC budget.
+
+**Converting to battery current:**
+
+```
+L3 retained:    654.8 μW / 0.85 / 3.8 V = 202.7 μA  + 30 μA PMIC quiescent = 232.7 μA   (target 300 μA: 22% margin)
+L3 powered off: 285.8 μW / 0.85 / 3.8 V =  88.5 μA  + 30 μA PMIC quiescent = 118.5 μA   (target 300 μA: 60% margin)
+```
 
 **Why the L3 SRAM dominates:**
 
-4 MB = 33.5 Mbit. At 5 nA/bit in full-power retention: 167 mA — far exceeding the budget. Therefore:
+Even at a realistic tens of pA/bit, the 33.55 Mbit L3 is 56% of on-chip deep-sleep power (369 of 655 μW), more than all the retained logic combined. The design choices are:
 
-1. L3 SRAM must use a purpose-designed retention supply (0.5 V, not 0.75 V). At 0.5 V, leakage drops to ~2 nA/bit.
-2. At 2 nA/bit × 33.5 Mbit = 67 mA — still too high. The solution: **partial L3 flush**. Before entering deep sleep, flush and power off most of the L3 cache. Retain only the smallest viable portion (e.g., 256 KB for OS kernel hot data). 256 KB = 2 Mbit × 2 nA/bit = 4 mA... still high.
-3. For true deep sleep, the L3 SRAM is **fully powered off**. Contents are flushed to DRAM before sleep. Wake-up requires L3 refill, which increases wake latency by ~500 μs. This is acceptable for deep sleep scenarios.
+1. **Retention voltage.** Retaining at 0.55 V rather than the 0.75 V logic rail cuts both the leakage current and the voltage it is multiplied by; this is why the L3 has its own retention supply.
+2. **Retain all of L3** (232.7 μA, meets the target with 22% margin): fastest wake-up, no refill traffic.
+3. **Retain a slice** (e.g. 512 KB for OS kernel hot data: 4.19 Mbit × 20 pA × 0.55 V = 46 μW): most of the margin back, with a partial refill on wake.
+4. **Power off L3 completely** (118.5 μA): flush to DRAM before sleep; wake-up then pays the L3 refill latency. This leaves the most margin for temperature, since leakage rises steeply above 25°C, and for process corners.
 
-Revised budget with L3 fully off: 250 μA → 170 μA (below the 300 μA target with comfortable margin).
+This design powers off the L3 in deep sleep to keep margin for hot and fast-corner silicon, and retains it in lighter sleep states where wake latency matters more.
 
 ---
 
@@ -341,7 +349,7 @@ Level shifters are required on all paths where VDD_MAIN (0.55–1.05 V, variable
 | Total isolation cells (approximate) | ~800–1200 across all boundaries |
 | CPU power-down time | ~15 μs |
 | CPU power-up time | ~100–200 μs |
-| Deep sleep SoC leakage | ~170 μA (L3 cache fully off) |
+| Deep sleep battery current | ~119 μA with L3 off (~233 μA with L3 retained); target 300 μA |
 | Display isolation cells | 144 |
 
 ## Key Takeaways
