@@ -142,6 +142,7 @@ Work through the materials in order, completing worked problems and coding chall
 - [MMU](https://github.com/BrendanJamesLynskey/MMU)
 - [RISCV_DMA](https://github.com/BrendanJamesLynskey/RISCV_DMA)
 - [Interview_Digital_Hardware_Design](https://github.com/BrendanJamesLynskey/Interview_Digital_Hardware_Design)
+- **[Modelling Memory Systems: DRAM and HBM](https://brendanjameslynskey.github.io/SimEng_04_Memory_Systems_DRAM_HBM/)** — DRAM/HBM timing, scheduling, address mapping and refresh modelled at command level; code in [Memory_System_Sim](https://github.com/BrendanJamesLynskey/Memory_System_Sim) ([Simulation Engineering Toolkit](https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit))
 
 ## Contributing
 
